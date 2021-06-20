@@ -1,9 +1,6 @@
 package com.github.pdhbe.studyolle.account;
 
-import com.github.pdhbe.studyolle.domain.Account;
 import lombok.RequiredArgsConstructor;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.Errors;
@@ -19,8 +16,7 @@ import javax.validation.Valid;
 @RequiredArgsConstructor
 public class AccountController {
     private final SignUpFormValidator signUpFormValidator;
-    private final AccountRepository accountRepository;
-    private final JavaMailSender javaMailSender;
+    private final AccountService accountService;
 
     @InitBinder(value = "signUpFormDto")
     public void initBinder(WebDataBinder webDataBinder) {
@@ -38,26 +34,7 @@ public class AccountController {
         if (errors.hasErrors()) {
             return "account/sign-up";
         }
-
-        Account account = Account.builder()
-                .nickname(signUpFormDto.getNickname())
-                .email(signUpFormDto.getEmail())
-                .password(signUpFormDto.getPassword()) // 추후에 encoding 작업 추가
-                .AlarmByWebStudyCreated(true)
-                .AlarmByWebStudyUpdated(true)
-                .AlarmByWebStudyEnrollmentResult(true)
-                .build();
-
-        Account savedAccount = accountRepository.save(account);
-
-        savedAccount.generateEmailCheckToken();
-        SimpleMailMessage mailMessage = new SimpleMailMessage();
-        mailMessage.setTo(savedAccount.getEmail());
-        mailMessage.setSubject("스터디 올레, 회원 가입 인증");
-        mailMessage.setText("/check-email-token?token=" + savedAccount.getEmailCheckToken() +
-                "&email=" + savedAccount.getEmail());
-        javaMailSender.send(mailMessage);
-
+        accountService.submitSignUp(signUpFormDto);
         return "redirect:/";
     }
 }
