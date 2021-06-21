@@ -10,16 +10,20 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.then;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class AccountControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -29,6 +33,57 @@ class AccountControllerTest {
 
     @MockBean
     private JavaMailSender javaMailSender;
+
+    @Test
+    @DisplayName("인증 메일 확인 - 이메일 오류")
+    void checkEmailToken_invalidEmail() throws Exception {
+        mockMvc.perform(get("/check-email-token")
+                .param("email", "nonExistsEmail@email.com")
+                .param("token", "asdfasdf"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("account/checked-email"))
+                .andExpect(model().attribute("errorMsg", "Invalid Email"));
+    }
+
+    @Test
+    @DisplayName("인증 메일 확인 - 토큰 오류")
+    void checkEmailToken_invalidToken() throws Exception {
+        String existEmail = "pdh@naver.com";
+        Account savedAccount = accountRepository.save(Account.builder()
+                .email(existEmail)
+                .nickname("pdh")
+                .password("12341234")
+                .build());
+        savedAccount.generateEmailCheckToken();
+
+        mockMvc.perform(get("/check-email-token")
+                .param("email", savedAccount.getEmail())
+                .param("token", "invalidToken"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("account/checked-email"))
+                .andExpect(model().attribute("errorMsg", "Invalid Token"));
+    }
+
+    @Test
+    @DisplayName("인증 메일 확인 - 성공")
+    void checkEmailToken_success() throws Exception {
+        String existEmail = "pdh@naver.com";
+        Account savedAccount = accountRepository.save(Account.builder()
+                .email(existEmail)
+                .nickname("pdh")
+                .password("12341234")
+                .build());
+        savedAccount.generateEmailCheckToken();
+
+        mockMvc.perform(get("/check-email-token")
+                .param("email", savedAccount.getEmail())
+                .param("token", savedAccount.getEmailCheckToken()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("account/checked-email"))
+                .andExpect(model().attributeDoesNotExist("errorMsg"))
+                .andExpect(model().attribute("numOfUsers",accountRepository.count()))
+                .andExpect(model().attribute("nickname",savedAccount.getNickname()));
+    }
 
     @Test
     @DisplayName("회원가입 페이지 테스트")
@@ -65,7 +120,7 @@ class AccountControllerTest {
         assertTrue(accountRepository.existsByEmail("ehgusdl67@naver.com"));
 
         Account savedAccount = accountRepository.findByEmail("ehgusdl67@naver.com");
-        assertNotEquals("12345678",savedAccount.getPassword());
+        assertNotEquals("12345678", savedAccount.getPassword());
 
         then(javaMailSender).should().send(any(SimpleMailMessage.class));
     }
