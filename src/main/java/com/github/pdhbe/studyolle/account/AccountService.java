@@ -4,9 +4,15 @@ import com.github.pdhbe.studyolle.domain.Account;
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.jaas.JaasAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -16,10 +22,11 @@ public class AccountService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public void submitSignUp(SignUpFormDto signUpFormDto){
+    public Account submitSignUp(SignUpFormDto signUpFormDto){
         Account savedAccount = saveNewAccount(signUpFormDto);
         savedAccount.generateEmailCheckToken();
         sendSignUpConfirmEmail(savedAccount);
+        return savedAccount;
     }
 
     private void sendSignUpConfirmEmail(Account savedAccount) {
@@ -43,5 +50,13 @@ public class AccountService {
 
         Account savedAccount = accountRepository.save(account);
         return savedAccount;
+    }
+
+    public void login(Account account) {
+        UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(
+                account.getNickname(),
+                account.getPassword(),
+                List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        SecurityContextHolder.getContext().setAuthentication(token);
     }
 }

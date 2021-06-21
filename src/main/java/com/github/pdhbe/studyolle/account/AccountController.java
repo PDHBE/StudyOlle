@@ -37,7 +37,8 @@ public class AccountController {
         if (errors.hasErrors()) {
             return "account/sign-up";
         }
-        accountService.submitSignUp(signUpFormDto);
+        Account account = accountService.submitSignUp(signUpFormDto);
+        accountService.login(account);
         return "redirect:/";
     }
 
@@ -50,13 +51,14 @@ public class AccountController {
             return view;
         }
 
-        if(!account.getEmailCheckToken().equals(token)){
+        if(!account.isValidToken(token)){
             model.addAttribute("errorMsg", "Invalid Token");
             return view;
         }
 
         account.setEmailVerified(true);
         account.setJoinedAt(LocalDateTime.now());
+        accountService.login(account);
         model.addAttribute("numOfUsers", accountRepository.count());
         model.addAttribute("nickname", account.getNickname());
         return view;

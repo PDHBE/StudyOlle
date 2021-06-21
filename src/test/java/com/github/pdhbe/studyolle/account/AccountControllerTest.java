@@ -17,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.then;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.authenticated;
+import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.unauthenticated;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -42,7 +44,8 @@ class AccountControllerTest {
                 .param("token", "asdfasdf"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("account/checked-email"))
-                .andExpect(model().attribute("errorMsg", "Invalid Email"));
+                .andExpect(model().attribute("errorMsg", "Invalid Email"))
+                .andExpect(unauthenticated());
     }
 
     @Test
@@ -61,7 +64,8 @@ class AccountControllerTest {
                 .param("token", "invalidToken"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("account/checked-email"))
-                .andExpect(model().attribute("errorMsg", "Invalid Token"));
+                .andExpect(model().attribute("errorMsg", "Invalid Token"))
+                .andExpect(unauthenticated());
     }
 
     @Test
@@ -82,7 +86,8 @@ class AccountControllerTest {
                 .andExpect(view().name("account/checked-email"))
                 .andExpect(model().attributeDoesNotExist("errorMsg"))
                 .andExpect(model().attribute("numOfUsers",accountRepository.count()))
-                .andExpect(model().attribute("nickname",savedAccount.getNickname()));
+                .andExpect(model().attribute("nickname",savedAccount.getNickname()))
+                .andExpect(authenticated().withAuthenticationName(savedAccount.getNickname()));
     }
 
     @Test
@@ -91,11 +96,12 @@ class AccountControllerTest {
         mockMvc.perform(get("/sign-up"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("account/sign-up"))
-                .andExpect(model().attributeExists("signUpFormDto"));
+                .andExpect(model().attributeExists("signUpFormDto"))
+                .andExpect(unauthenticated());
     }
 
     @Test
-    @DisplayName("")
+    @DisplayName("회원가입 - 유효하지 않은 입력값")
     void signUpSubmit_invalidInput() throws Exception {
         mockMvc.perform(post("/sign-up")
                 .param("nickname", "pdh")
@@ -103,19 +109,21 @@ class AccountControllerTest {
                 .param("password", "12345")
                 .with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(view().name("account/sign-up"));
+                .andExpect(view().name("account/sign-up"))
+                .andExpect(unauthenticated());
     }
 
     @Test
-    @DisplayName("")
-    void signUpSubmit_validInput() throws Exception {
+    @DisplayName("회원가입 - 성공")
+    void signUpSubmit_success() throws Exception {
         mockMvc.perform(post("/sign-up")
                 .param("nickname", "pdh")
                 .param("email", "ehgusdl67@naver.com")
                 .param("password", "12345678")
                 .with(csrf()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(view().name("redirect:/"));
+                .andExpect(view().name("redirect:/"))
+                .andExpect(authenticated().withAuthenticationName("pdh"));
 
         assertTrue(accountRepository.existsByEmail("ehgusdl67@naver.com"));
 
