@@ -28,7 +28,7 @@ public class AccountService {
         return savedAccount;
     }
 
-    private void sendSignUpConfirmEmail(Account savedAccount) {
+    public void sendSignUpConfirmEmail(Account savedAccount) {
         SimpleMailMessage mailMessage = new SimpleMailMessage();
         mailMessage.setTo(savedAccount.getEmail());
         mailMessage.setSubject("스터디 올레, 회원 가입 인증");

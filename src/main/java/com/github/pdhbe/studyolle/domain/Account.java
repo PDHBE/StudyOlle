@@ -20,6 +20,7 @@ public class Account {
 
     private boolean emailVerified;
     private String emailCheckToken;
+    private LocalDateTime emailCheckTokenGeneratedAt;
 
     private LocalDateTime joinedAt;
 
@@ -40,10 +41,15 @@ public class Account {
     private boolean AlarmByWebStudyUpdated;
 
     public void generateEmailCheckToken() {
-        this.emailCheckToken = UUID.randomUUID().toString();
+        emailCheckToken = UUID.randomUUID().toString();
+        emailCheckTokenGeneratedAt = LocalDateTime.now();
     }
 
     public boolean isValidToken(String token) {
         return emailCheckToken.equals(token);
+    }
+
+    public boolean canSendConfirmEmail() {
+        return emailCheckTokenGeneratedAt.isBefore(LocalDateTime.now().minusHours(1));
     }
 }
