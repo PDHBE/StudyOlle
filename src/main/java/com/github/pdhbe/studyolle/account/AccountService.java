@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.authentication.jaas.JaasAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,7 +21,7 @@ public class AccountService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public Account submitSignUp(SignUpFormDto signUpFormDto){
+    public Account submitSignUp(SignUpFormDto signUpFormDto) {
         Account savedAccount = saveNewAccount(signUpFormDto);
         savedAccount.generateEmailCheckToken();
         sendSignUpConfirmEmail(savedAccount);
@@ -48,13 +47,12 @@ public class AccountService {
                 .AlarmByWebStudyEnrollmentResult(true)
                 .build();
 
-        Account savedAccount = accountRepository.save(account);
-        return savedAccount;
+        return accountRepository.save(account);
     }
 
     public void login(Account account) {
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(
-                account.getNickname(),
+                new UserAccount(account),
                 account.getPassword(),
                 List.of(new SimpleGrantedAuthority("ROLE_USER")));
         SecurityContextHolder.getContext().setAuthentication(token);
